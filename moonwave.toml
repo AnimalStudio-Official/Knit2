@@ -1,12 +1,9 @@
 gitRepoUrl = "https://github.com/AnimalStudio-Official/Knit2"
 
-
 classOrder = [
-    "CrystalClient",
-	"CrystalServer"
+    "CrystalServer",
+    "CrystalClient"
 ]
-
-
 
 [home]
 enabled = true

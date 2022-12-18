@@ -1,341 +1,322 @@
 --[=[
 	@interface Middleware
-	.Inbound ServerMiddleware?
-	.Outbound ServerMiddleware?
-	@within CrystalServer
+	.Inbound ClientMiddleware?
+	.Outbound ClientMiddleware?
+	@within CrystalClient
 ]=]
 type Middleware = {
-	Inbound: ServerMiddleware?,
-	Outbound: ServerMiddleware?,
+	Inbound: ClientMiddleware?,
+	Outbound: ClientMiddleware?,
 }
 
 --[=[
-	@type ServerMiddlewareFn (player: Player, args: {any}) -> (shouldContinue: boolean, ...: any)
-	@within CrystalServer
+	@type ClientMiddlewareFn (args: {any}) -> (shouldContinue: boolean, ...: any)
+	@within CrystalClient
 
-	For more info, see [ServerComm](https://sleitnick.github.io/RbxUtil/api/ServerComm/) documentation.
+	For more info, see [ClientComm](https://sleitnick.github.io/RbxUtil/api/ClientComm/) documentation.
 ]=]
-type ServerMiddlewareFn = (player: Player, args: {any}) -> (boolean, ...any)
+type ClientMiddlewareFn = (args: {any}) -> (boolean, ...any)
 
 --[=[
-	@type ServerMiddleware {ServerMiddlewareFn}
-	@within CrystalServer
-	An array of server middleware functions.
+	@type ClientMiddleware {ClientMiddlewareFn}
+	@within CrystalClient
+	An array of client middleware functions.
 ]=]
-type ServerMiddleware = {ServerMiddlewareFn}
+type ClientMiddleware = {ClientMiddlewareFn}
 
 --[=[
-	@interface ServiceDef
+	@type PerServiceMiddleware {[string]: Middleware}
+	@within CrystalClient
+]=]
+type PerServiceMiddleware = {[string]: Middleware}
+
+--[=[
+	@interface ControllerDef
 	.Name string
-	.Client table?
-	.Middleware Middleware?
 	.[any] any
-	@within CrystalServer
-	Used to define a service when creating it in `CreateService`.
-
-	The middleware tables provided will be used instead of the Crystal-level
-	middleware (if any). This allows fine-tuning each service's middleware.
-	These can also be left out or `nil` to not include middleware.
+	@within CrystalClient
+	Used to define a controller when creating it in `CreateController`.
 ]=]
-type ServiceDef = {
+type ControllerDef = {
 	Name: string,
-	Client: {[any]: any}?,
-	Middleware: Middleware?,
+	[any]: any,
+}
+
+--[=[
+	@interface Controller
+	.Name string
+	.[any] any
+	@within CrystalClient
+]=]
+type Controller = {
+	Name: string,
 	[any]: any,
 }
 
 --[=[
 	@interface Service
-	.Name string
-	.Client ServiceClient
-	.CrystalComm Comm
 	.[any] any
-	@within CrystalServer
+	@within CrystalClient
 ]=]
 type Service = {
-	Name: string,
-	Client: ServiceClient,
-	CrystalComm: any,
-	[any]: any,
-}
-
---[=[
-	@interface ServiceClient
-	.Server Service
-	.[any] any
-	@within CrystalServer
-]=]
-type ServiceClient = {
-	Server: Service,
 	[any]: any,
 }
 
 --[=[
 	@interface CrystalOptions
+	.ServicePromises boolean?
 	.Middleware Middleware?
-	@within CrystalServer
+	.PerServiceMiddleware PerServiceMiddleware?
+	@within CrystalClient
 
-	- Middleware will apply to all services _except_ ones that define
-	their own middleware.
+	- `ServicePromises` defaults to `true` and indicates if service methods use promises.
+	- Each service will go through the defined middleware, unless the service
+	has middleware defined in `PerServiceMiddleware`.
 ]=]
 type CrystalOptions = {
+	ServicePromises: boolean,
 	Middleware: Middleware?,
+	PerServiceMiddleware: PerServiceMiddleware?,
 }
 
 local defaultOptions: CrystalOptions = {
+	ServicePromises = true,
 	Middleware = nil,
+	PerServiceMiddleware = {},
 }
 
 local selectedOptions = nil
 
+
 --[=[
-	@class CrystalServer
-	@server
-	Crystal server-side lets developers create services and expose methods and signals
-	to the clients.
-
-	```lua
-	local Crystal = require(somewhere.Crystal)
-
-	-- Load service modules within some folder:
-	Crystal.AddServices(somewhere.Services)
-
-	-- Start Crystal:
-	Crystal.Start():andThen(function()
-		print("Crystal started")
-	end):catch(warn)
-	```
+	@class CrystalClient
+	@client
 ]=]
-local CrystalServer = {}
+local CrystalClient = {}
+
+--[=[
+	@prop Player Player
+	@within CrystalClient
+	@readonly
+	Reference to the LocalPlayer.
+]=]
+CrystalClient.Player = game:GetService("Players").LocalPlayer
 
 --[=[
 	@prop Util Folder
-	@within CrystalServer
+	@within CrystalClient
 	@readonly
 	References the Util folder. Should only be accessed when using Crystal as
 	a standalone module. If using Crystal from Wally, modules should just be
 	pulled in via Wally instead of relying on Crystal's Util folder, as this
 	folder only contains what is necessary for Crystal to run in Wally mode.
 ]=]
-CrystalServer.Util = script.Parent.Parent
+CrystalClient.Util = script.Parent.Parent
 
-local SIGNAL_MARKER = newproxy(true)
-getmetatable(SIGNAL_MARKER).__tostring = function()
-	return "SIGNAL_MARKER"
-end
+local Promise = require(CrystalClient.Util.Promise)
+local Comm = require(CrystalClient.Util.Comm)
+local ClientComm = Comm.ClientComm
 
-local PROPERTY_MARKER = newproxy(true)
-getmetatable(PROPERTY_MARKER).__tostring = function()
-	return "PROPERTY_MARKER"
-end
-
-local CrystalRepServiceFolder = Instance.new("Folder")
-CrystalRepServiceFolder.Name = "Services"
-
-local Promise = require(CrystalServer.Util.Promise)
-local Comm = require(CrystalServer.Util.Comm)
-local ServerComm = Comm.ServerComm
-
+local controllers: {[string]: Controller} = {}
 local services: {[string]: Service} = {}
+local servicesFolder = nil
+
 local started = false
 local startedComplete = false
 local onStartedComplete = Instance.new("BindableEvent")
 
 
-local function DoesServiceExist(serviceName: string): boolean
-	local service: Service? = services[serviceName]
-	return service ~= nil
+local function DoesControllerExist(controllerName: string): boolean
+	local controller: Controller? = controllers[controllerName]
+	return controller ~= nil
 end
 
 
---[=[
-	Constructs a new service.
-
-	:::caution
-	Services must be created _before_ calling `Crystal.Start()`.
-	:::
-	```lua
-	-- Create a service
-	local MyService = Crystal.CreateService {
-		Name = "MyService",
-		Client = {},
-	}
-
-	-- Expose a ToAllCaps remote function to the clients
-	function MyService.Client:ToAllCaps(player, msg)
-		return msg:upper()
+local function GetServicesFolder()
+	if not servicesFolder then
+		servicesFolder = script.Parent:WaitForChild("Services")
 	end
+	return servicesFolder
+end
 
-	-- Crystal will call CrystalStart after all services have been initialized
-	function MyService:CrystalStart()
-		print("MyService started")
-	end
 
-	-- Crystal will call CrystalInit when Crystal is first started
-	function MyService:CrystalInit()
-		print("MyService initialize")
-	end
-	```
-]=]
-function CrystalServer.CreateService(serviceDef: ServiceDef): Service
-	assert(type(serviceDef) == "table", "Service must be a table; got " .. type(serviceDef))
-	assert(type(serviceDef.Name) == "string", "Service.Name must be a string; got " .. type(serviceDef.Name))
-	assert(#serviceDef.Name > 0, "Service.Name must be a non-empty string")
-	assert(not DoesServiceExist(serviceDef.Name), "Service \"" .. serviceDef.Name .. "\" already exists")
-	local service = serviceDef
-	service.CrystalComm = ServerComm.new(CrystalRepServiceFolder, serviceDef.Name)
-	if type(service.Client) ~= "table" then
-		service.Client = {Server = service}
-	else
-		if service.Client.Server ~= service then
-			service.Client.Server = service
-		end
-	end
-	services[service.Name] = service
+local function GetMiddlewareForService(serviceName: string)
+	local CrystalMiddleware = selectedOptions.Middleware or {}
+	local serviceMiddleware = selectedOptions.PerServiceMiddleware[serviceName]
+	return serviceMiddleware or CrystalMiddleware
+end
+
+
+local function BuildService(serviceName: string)
+	local folder = GetServicesFolder()
+	local middleware = GetMiddlewareForService(serviceName)
+	local clientComm = ClientComm.new(folder, selectedOptions.ServicePromises, serviceName)
+	local service = clientComm:BuildObject(middleware.Inbound, middleware.Outbound)
+	services[serviceName] = service
 	return service
 end
 
 
 --[=[
-	Requires all the modules that are children of the given parent with an optional affix. This is an easy
-	way to quickly load all services that might be in a folder.
+	Creates a new controller.
+
+	:::caution
+	Controllers must be created _before_ calling `Crystal.Start()`.
+	:::
 	```lua
-	Crystal.AddServices(somewhere.Services)
+	-- Create a controller
+	local MyController = Crystal.CreateController {
+		Name = "MyController",
+	}
+
+	function MyController:CrystalStart()
+		print("MyController started")
+	end
+
+	function MyController:CrystalInit()
+		print("MyController initialized")
+	end
 	```
 ]=]
-function CrystalServer.AddServices(parent: Instance, affix: string): {Service}
-	local addedServices = {}
+function CrystalClient.CreateController(controllerDef: ControllerDef): Controller
+	assert(type(controllerDef) == "table", "Controller must be a table; got " .. type(controllerDef))
+	assert(type(controllerDef.Name) == "string", "Controller.Name must be a string; got " .. type(controllerDef.Name))
+	assert(#controllerDef.Name > 0, "Controller.Name must be a non-empty string")
+	assert(not DoesControllerExist(controllerDef.Name), "Controller \"" .. controllerDef.Name .. "\" already exists")
+	local controller = controllerDef :: Controller
+	controllers[controller.Name] = controller
+	return controller
+end
+
+
+--[=[
+	Requires all the modules that are children of the given parent with an optional affix. This is an easy
+	way to quickly load all controllers that might be in a folder.
+	```lua
+	Crystal.AddControllers(somewhere.Controllers)
+	```
+]=]
+function CrystalClient.AddControllers(parent: Instance, affix: string): {Controller}
+	local addedControllers = {}
 	for _,v in ipairs(parent:GetChildren()) do
 		if not v:IsA("ModuleScript") then continue end
 		if not v.Name:match(affix or "") then continue end
-		table.insert(addedServices, require(v))
+		table.insert(addedControllers, require(v))
 	end
-	return addedServices
+	return addedControllers
 end
 
 
 --[=[
 	Requires all the modules that are descendants of the given parent with an optional affix.
 ]=]
-function CrystalServer.AddServicesDeep(parent: Instance, affix: string): {Service}
-	local addedServices = {}
+function CrystalClient.AddControllersDeep(parent: Instance, affix: string): {Controller}
+	local addedControllers = {}
 	for _,v in ipairs(parent:GetDescendants()) do
 		if not v:IsA("ModuleScript") then continue end
 		if not v.Name:match(affix or "") then continue end
-		table.insert(addedServices, require(v))
+		table.insert(addedControllers, require(v))
 	end
-	return addedServices
+	return addedControllers
 end
 
 
 --[=[
-	Gets the service by name. Throws an error if the service is not found.
+	Returns a Service object which is a reflection of the remote objects
+	within the Client table of the given service. Throws an error if the
+	service is not found.
+
+	If a service's Client table contains RemoteSignals and/or RemoteProperties,
+	these values are reflected as
+	[ClientRemoteSignals](https://sleitnick.github.io/RbxUtil/api/ClientRemoteSignal) and
+	[ClientRemoteProperties](https://sleitnick.github.io/RbxUtil/api/ClientRemoteProperty).
+
+	```lua
+	-- Server-side service creation:
+	local MyService = Crystal.CreateService {
+		Name = "MyService",
+		Client = {
+			MySignal = Crystal.CreateSignal(),
+			MyProperty = Crystal.CreateProperty("Hello"),
+		},
+	}
+	function MyService:AddOne(player, number)
+		return number + 1
+	end
+
+	-------------------------------------------------
+
+	-- Client-side service reflection:
+	local MyService = Crystal.GetService("MyService")
+
+	-- Call a method:
+	local num = MyService:AddOne(5) --> 6
+
+	-- Fire a signal to the server:
+	MyService.MySignal:Fire("Hello")
+
+	-- Listen for signals from the server:
+	MyService.MySignal:Connect(function(message)
+		print(message)
+	end)
+
+	-- Observe the initial value and changes to properties:
+	MyService.MyProperty:Observe(function(value)
+		print(value)
+	end)
+	```
+
+	:::caution
+	Services are only exposed to the client if the service has remote-based
+	content in the Client table. If not, the service will not be visible
+	to the client. `CrystalClient.GetService` will only work on services that
+	expose remote-based content on their Client tables.
+	:::
 ]=]
-function CrystalServer.GetService(serviceName: string): Service
+function CrystalClient.GetService(serviceName: string): Service
+	local service = services[serviceName]
+	if service then
+		return service
+	end
 	assert(started, "Cannot call GetService until Crystal has been started")
 	assert(type(serviceName) == "string", "ServiceName must be a string; got " .. type(serviceName))
-	return assert(services[serviceName], "Could not find service \"" .. serviceName .. "\"") :: Service
+	return BuildService(serviceName)
 end
 
 
 --[=[
-	@return SIGNAL_MARKER
-	Returns a marker that will transform the current key into
-	a RemoteSignal once the service is created. Should only
-	be called within the Client table of a service.
-
-	See [RemoteSignal](https://sleitnick.github.io/RbxUtil/api/RemoteSignal)
-	documentation for more info.
-	```lua
-	local MyService = Crystal.CreateService {
-		Name = "MyService",
-		Client = {
-			-- Create the signal marker, which will turn into a
-			-- RemoteSignal when Crystal.Start() is called:
-			MySignal = Crystal.CreateSignal(),
-		},
-	}
-
-	function MyService:CrystalInit()
-		-- Connect to the signal:
-		self.Client.MySignal:Connect(function(player, ...) end)
-	end
-	```
+	Gets the controller by name. Throws an error if the controller
+	is not found.
 ]=]
-function CrystalServer.CreateSignal()
-	return SIGNAL_MARKER
-end
-
-
---[=[
-	@return PROPERTY_MARKER
-	Returns a marker that will transform the current key into
-	a RemoteProperty once the service is created. Should only
-	be called within the Client table of a service. An initial
-	value can be passed along as well.
-
-	RemoteProperties are great for replicating data to all of
-	the clients. Different data can also be set per client.
-
-	See [RemoteProperty](https://sleitnick.github.io/RbxUtil/api/RemoteProperty)
-	documentation for more info.
-
-	```lua
-	local MyService = Crystal.CreateService {
-		Name = "MyService",
-		Client = {
-			-- Create the property marker, which will turn into a
-			-- RemoteProperty when Crystal.Start() is called:
-			MyProperty = Crystal.CreateProperty("HelloWorld"),
-		},
-	}
-
-	function MyService:CrystalInit()
-		-- Change the value of the property:
-		self.Client.MyProperty:Set("HelloWorldAgain")
+function CrystalClient.GetController(controllerName: string): Controller
+	local controller = controllers[controllerName]
+	if controller then
+		return controller
 	end
-	```
-]=]
-function CrystalServer.CreateProperty(initialValue: any)
-	return {PROPERTY_MARKER, initialValue}
+	assert(started, "Cannot call GetController until Crystal has been started")
+	assert(type(controllerName) == "string", "ControllerName must be a string; got " .. type(controllerName))
+	error("Could not find controller \"" .. controllerName .. "\". Check to verify a controller with this name exists.", 2)
 end
 
 
 --[=[
 	@return Promise
-	Starts Crystal. Should only be called once.
-
-	Optionally, `CrystalOptions` can be passed in order to set
-	Crystal's custom configurations.
-
-	:::caution
-	Be sure that all services have been created _before_
-	calling `Start`. Services cannot be added later.
-	:::
-
+	Starts Crystal. Should only be called once per client.
 	```lua
 	Crystal.Start():andThen(function()
 		print("Crystal started!")
 	end):catch(warn)
 	```
-	
-	Example of Crystal started with options:
+
+	By default, service methods exposed to the client will return promises.
+	To change this behavior, set the `ServicePromises` option to `false`:
 	```lua
-	Crystal.Start({
-		Middleware = {
-			Inbound = {
-				function(player, args)
-					print("Player is giving following args to server:", args)
-					return true
-				end
-			},
-		},
-	}):andThen(function()
+	Crystal.Start({ServicePromises = false}):andThen(function()
 		print("Crystal started!")
 	end):catch(warn)
 	```
 ]=]
-function CrystalServer.Start(options: CrystalOptions?)
+function CrystalClient.Start(options: CrystalOptions?)
 
 	if started then
 		return Promise.reject("Crystal already started")
@@ -354,50 +335,35 @@ function CrystalServer.Start(options: CrystalOptions?)
 			end
 		end
 	end
+	if type(selectedOptions.PerServiceMiddleware) ~= "table" then
+		selectedOptions.PerServiceMiddleware = {}
+	end
 
 	return Promise.new(function(resolve)
 
-		local CrystalMiddleware = selectedOptions.Middleware or {}
-
-		-- Bind remotes:
-		for _,service in pairs(services) do
-			local middleware = service.Middleware or {}
-			local inbound = middleware.Inbound or CrystalMiddleware.Inbound
-			local outbound = middleware.Outbound or CrystalMiddleware.Outbound
-			service.Middleware = nil
-			for k,v in pairs(service.Client) do
-				if type(v) == "function" then
-					service.CrystalComm:WrapMethod(service.Client, k, inbound, outbound)
-				elseif v == SIGNAL_MARKER then
-					service.Client[k] = service.CrystalComm:CreateSignal(k, inbound, outbound)
-				elseif type(v) == "table" and v[1] == PROPERTY_MARKER then
-					service.Client[k] = service.CrystalComm:CreateProperty(k, v[2], inbound, outbound)
-				end
-			end
-		end
-
 		-- Init:
-		local promisesInitServices = {}
-		for _,service in pairs(services) do
-			if type(service.CrystalInit) == "function" then
-				table.insert(promisesInitServices, Promise.new(function(r)
-					debug.setmemorycategory(service.Name)
-					service:CrystalInit()
+		local promisesStartControllers = {}
+
+		for _,controller in pairs(controllers) do
+			if type(controller.CrystalInit) == "function" then
+				table.insert(promisesStartControllers, Promise.new(function(r)
+					debug.setmemorycategory(controller.Name)
+					controller:CrystalInit()
 					r()
 				end))
 			end
 		end
 
-		resolve(Promise.all(promisesInitServices))
+		resolve(Promise.all(promisesStartControllers))
 
 	end):andThen(function()
 
 		-- Start:
-		for _,service in pairs(services) do
-			if type(service.CrystalStart) == "function" then
+		for _,controller in pairs(controllers) do
+			if type(controller.CrystalStart) == "function" then
 				task.spawn(function()
-					debug.setmemorycategory(service.Name)
-					service:CrystalStart()
+					debug.setmemorycategory(controller.Name)
+					controller:CrystalStart()
 				end)
 			end
 		end
@@ -409,9 +375,6 @@ function CrystalServer.Start(options: CrystalOptions?)
 			onStartedComplete:Destroy()
 		end)
 
-		-- Expose service remotes to everyone:
-		CrystalRepServiceFolder.Parent = script.Parent
-
 	end)
 
 end
@@ -420,16 +383,16 @@ end
 --[=[
 	@return Promise
 	Returns a promise that is resolved once Crystal has started. This is useful
-	for any code that needs to tie into Crystal services but is not the script
+	for any code that needs to tie into Crystal controllers but is not the script
 	that called `Start`.
 	```lua
 	Crystal.OnStart():andThen(function()
-		local MyService = Crystal.Services.MyService
-		MyService:DoSomething()
+		local MyController = Crystal.GetController("MyController")
+		MyController:DoSomething()
 	end):catch(warn)
 	```
 ]=]
-function CrystalServer.OnStart()
+function CrystalClient.OnStart()
 	if startedComplete then
 		return Promise.resolve()
 	else
@@ -438,4 +401,4 @@ function CrystalServer.OnStart()
 end
 
 
-return CrystalServer
+return CrystalClient
