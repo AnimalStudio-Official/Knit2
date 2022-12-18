@@ -27,7 +27,7 @@ jobs:
           cd ..
       - name: Build place file
         run: |
-          rojo build publish.project.json -o Knit.rbxl
+          rojo build publish.project.json -o Crystal.rbxl
 
       - name: Get version
         id: get_version
@@ -41,4 +41,4 @@ jobs:
           body_path: log.md
           fail_on_unmatched_files: true
           files: |
-            Knit.rbxl
+            Crystal.rbxl
