@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: "16.14"
       - run: npm i -g moonwave@latest
+      - run: npm audit fix --force
       - name: Publish
         run: |
           git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
