@@ -1,6 +1,6 @@
 [package]
-name = "AnimalStudio-Official/Knit2"
-description = "Knit is a lightweight game framework"
+name = "AnimalStudio-Official/Crystal"
+description = "lightweight game framework"
 version = "1.4.7"
 license = "MIT"
 registry = "https://github.com/UpliftGames/wally-index"
