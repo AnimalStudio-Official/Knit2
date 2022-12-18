@@ -1,6 +1,6 @@
 ## 1.4.7
 
-- Update dependencies for bundled version of Knit
+- Update dependencies for bundled version of Crystal
 
 ## 1.4.6
 

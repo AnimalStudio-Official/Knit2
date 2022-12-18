@@ -4,15 +4,15 @@ sidebar_position: 8
 
 # Middleware
 
-Knit's networking layer uses the [Comm](https://sleitnick.github.io/RbxUtil/api/Comm/) module internally, which allows for middleware to be introduced at both the inbound and outbound level. For example, if a service had a client method called `GetMoney(player)`, and the client called that method, your service would then fire that function. If there is any inbound middleware on the server, the inbound middleware would fire _before_ `GetMoney` is fired. And the outbound middleware would fire _after_ GetMoney is fired.
+Crystal's networking layer uses the [Comm](https://sleitnick.github.io/RbxUtil/api/Comm/) module internally, which allows for middleware to be introduced at both the inbound and outbound level. For example, if a service had a client method called `GetMoney(player)`, and the client called that method, your service would then fire that function. If there is any inbound middleware on the server, the inbound middleware would fire _before_ `GetMoney` is fired. And the outbound middleware would fire _after_ GetMoney is fired.
 
 Middleware can be used to both transform inbound/outbound arguments, and also decide to drop requests/responses. This is useful for many use-cases, such as automatically serializing/deserializing complex data types over the network, or sanitizing incoming data.
 
-Middleware can be added on both the server and client, and affects functions and signals. Middleware can either be added at the Knit global level, or per service.
+Middleware can be added on both the server and client, and affects functions and signals. Middleware can either be added at the Crystal global level, or per service.
 
 ## Usage
 
-Middleware is added when Knit is started: `Knit.Start({Middleware = {Inbound = {...}, Outbound = {...}}})` _or_ on each service. Each "middleware" item in the tables is a function. On the client, this function takes an array table containing all the arguments passed along. On the server, it is nearly the same, except the first argument before the arguments table is the player.
+Middleware is added when Crystal is started: `Crystal.Start({Middleware = {Inbound = {...}, Outbound = {...}}})` _or_ on each service. Each "middleware" item in the tables is a function. On the client, this function takes an array table containing all the arguments passed along. On the server, it is nearly the same, except the first argument before the arguments table is the player.
 
 Each function should return a boolean, indicating whether or not to continue to the request/response. If `false`, an optional variadic list of items can be returned, which will be returned back to the caller (essentially a short-circuit, but still returning data).
 
@@ -30,7 +30,7 @@ local function Logger(args: {any})
 	return true
 end
 
-Knit.Start({
+Crystal.Start({
 	Middleware = {Inbound = {Logger}}
 })
 ```
@@ -42,7 +42,7 @@ local function Logger(player: Player, args: {any})
 	return true
 end
 
-Knit.Start({
+Crystal.Start({
 	Middleware = {Inbound = {Logger}}
 })
 ```
@@ -60,7 +60,7 @@ local function DoubleNumbers(args)
 	return true
 end
 
-Knit.Start({Middleware = {Inbound = {DoubleNumbers}}})
+Crystal.Start({Middleware = {Inbound = {DoubleNumbers}}})
 ```
 
 #### Per-Service Example
@@ -68,7 +68,7 @@ Knit.Start({Middleware = {Inbound = {DoubleNumbers}}})
 Middleware can also be targeted per-service, which will override the global level middleware for the given service.
 ```lua
 -- Server-side:
-local MyService = Knit.CreateService {
+local MyService = Crystal.CreateService {
 	Name = "MyService",
 	Client = {},
 	Middleware = {
@@ -78,10 +78,10 @@ local MyService = Knit.CreateService {
 }
 ```
 
-On the client, things look a little different. Middleware is still per-service, not controller, so the definitions of per-service middleware need to go within `Knit.Start()` on the client:
+On the client, things look a little different. Middleware is still per-service, not controller, so the definitions of per-service middleware need to go within `Crystal.Start()` on the client:
 ```lua
 -- Client-side:
-Knit.Start({
+Crystal.Start({
 	PerServiceMiddleware = {
 		-- Mapped by name of the service
 		MyService = {
@@ -139,7 +139,7 @@ local function OutboundClass(args)
 	return true
 end
 
-Knit.Start({
+Crystal.Start({
 	Middleware = {
 		Inbound = {InboundClass},
 		Outbound = {OutboundClass},

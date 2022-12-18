@@ -1,8 +1,8 @@
-gitRepoUrl = "https://github.com/Sleitnick/Knit"
+gitRepoUrl = "https://github.com/AnimalStudio-Official/Knit2"
 
 classOrder = [
-	"KnitServer",
-	"KnitClient"
+	"CrystalServer",
+	"CrystalClient"
 ]
 
 [home]

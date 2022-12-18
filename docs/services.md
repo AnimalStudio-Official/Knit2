@@ -17,17 +17,17 @@ For the sake of example, we will slowly develop PointsService to show how a serv
 In its simplest form, a service can be created like so:
 
 ```lua
-local PointsService = Knit.CreateService { Name = "PointsService", Client = {} }
+local PointsService = Crystal.CreateService { Name = "PointsService", Client = {} }
 
 return PointsService
 ```
 
 :::note Client table optional
-The `Client` table is optional for the constructor. However, it will be added by Knit if left out. For the sake of code clarity, it is recommended to keep it in the constructor as shown above.
+The `Client` table is optional for the constructor. However, it will be added by Crystal if left out. For the sake of code clarity, it is recommended to keep it in the constructor as shown above.
 :::
 
 :::caution No client table forces server-only mode
-If the `Client` table is omitted, the service will be interpreted as server-side only. This means that the client will _not_ be able to access this service using `Knit.GetService` on the client.
+If the `Client` table is omitted, the service will be interpreted as server-side only. This means that the client will _not_ be able to access this service using `Crystal.GetService` on the client.
 :::caution
 
 The `Name` field is required. This name is how code outside of your service will find it. This name must be unique from all other services. It is best practice to name your variable the same as the service name (e.g. `local PointsService` matches `Name = "PointsService"`).
@@ -81,7 +81,7 @@ What if we want to fire an event when the amount of points changes? This is easy
 
 ```lua
 -- Load the Signal module and create PointsChanged signal:
-local Signal = require(Knit.Util.Signal)
+local Signal = require(Crystal.Util.Signal)
 PointsService.PointsChanged = Signal.new()
 
 -- Modify AddPoints:
@@ -99,32 +99,32 @@ end
 Another service could then listen for the changes on that event:
 
 ```lua
-function SomeOtherService:KnitStart()
-	local PointsService = Knit.GetService("PointsService")
+function SomeOtherService:CrystalStart()
+	local PointsService = Crystal.GetService("PointsService")
 	PointsService.PointsChanged:Connect(function(player, points)
 		print("Points changed for " .. player.Name .. ":", points)
 	end)
 end
 ```
 
-## KnitInit and KnitStart
+## CrystalInit and CrystalStart
 
-In that last code snippet, there's an odd `KnitStart()` method. This is part of the Knit lifecycle (read more under [execution model](executionmodel.md)). These methods are optional, but very useful for orchestrating communication between other services.
+In that last code snippet, there's an odd `CrystalStart()` method. This is part of the Crystal lifecycle (read more under [execution model](executionmodel.md)). These methods are optional, but very useful for orchestrating communication between other services.
 
-When a service is first created, it is not guaranteed that other services are also created and ready to be used. The `KnitInit` and `KnitStart` methods come to save the day! After all services are created and the `Knit.Start()` method is fired, the `KnitInit` methods of all services will be fired.
+When a service is first created, it is not guaranteed that other services are also created and ready to be used. The `CrystalInit` and `CrystalStart` methods come to save the day! After all services are created and the `Crystal.Start()` method is fired, the `CrystalInit` methods of all services will be fired.
 
-From the `KnitInit` method, we can guarantee that all other services have been created. However, we still cannot guarantee that those services are ready to be consumed. Therefore, we can _reference_ them within the `Init` step, but we should never _use_ them (e.g. use the methods or events attached to those other services).
+From the `CrystalInit` method, we can guarantee that all other services have been created. However, we still cannot guarantee that those services are ready to be consumed. Therefore, we can _reference_ them within the `Init` step, but we should never _use_ them (e.g. use the methods or events attached to those other services).
 
-After all `KnitInit` methods have finished, all `KnitStart` methods are then fired. At this point, we can guarantee that all `KnitInits` are done, and thus can freely access other services.
+After all `CrystalInit` methods have finished, all `CrystalStart` methods are then fired. At this point, we can guarantee that all `CrystalInits` are done, and thus can freely access other services.
 
-In order to maintain this pattern, be sure to set up your service in the `Init` method (or earlier; just in the ModuleScript itself). By the time `KnitStart` methods are being fired, your services should be available for use.
+In order to maintain this pattern, be sure to set up your service in the `Init` method (or earlier; just in the ModuleScript itself). By the time `CrystalStart` methods are being fired, your services should be available for use.
 
 ## Cleaning Up Unused Memory
 
-Alright, back to our PointsService! We have a problem... We have created a [memory leak](https://en.wikipedia.org/wiki/Memory_leak)! When we add points for a player, we add the player to the table. What happens when the player leaves? Nothing! And that's a problem. That player's data is forever held onto within that `PointsPerPlayer` table. To fix this, we need to clear out that data when the player leaves. We can use the `KnitInit` method to hook up to the `Players.PlayerRemoving` event and remove the data:
+Alright, back to our PointsService! We have a problem... We have created a [memory leak](https://en.wikipedia.org/wiki/Memory_leak)! When we add points for a player, we add the player to the table. What happens when the player leaves? Nothing! And that's a problem. That player's data is forever held onto within that `PointsPerPlayer` table. To fix this, we need to clear out that data when the player leaves. We can use the `CrystalInit` method to hook up to the `Players.PlayerRemoving` event and remove the data:
 
 ```lua
-function PointsService:KnitInit()
+function PointsService:CrystalInit()
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		-- Clear out the data for the player when the player leaves:
 		self.PointsPerPlayer[player] = nil
@@ -132,11 +132,11 @@ function PointsService:KnitInit()
 end
 ```
 
-While memory management is not unique to Knit, it is still an important aspect to consider when making your game. Even a garbage-collected language like Lua can have memory leaks introduced by the developer.
+While memory management is not unique to Crystal, it is still an important aspect to consider when making your game. Even a garbage-collected language like Lua can have memory leaks introduced by the developer.
 
 ## Client Communication
 
-Alright, so we can store and add points on the server for a player. But who cares? Players have no visibility to these points at the moment. We need to open a line of communication between our service and the clients (AKA players). This functionality is so fundamental to Knit, that it's where the name came from: The need to _knit_ together communication.
+Alright, so we can store and add points on the server for a player. But who cares? Players have no visibility to these points at the moment. We need to open a line of communication between our service and the clients (AKA players). This functionality is so fundamental to Crystal, that it's where the name came from: The need to _Crystal_ together communication.
 
 This is where we are going to use that `Client` table defined at the beginning.
 
@@ -153,15 +153,15 @@ end
 
 This creates a client-exposed method called `GetPoints`. Within it, we reach back to our top-level service using `self.Server` and then invoke our other `GetPoints` method that we wrote before. In this example, we've basically just created a proxy for another method; however, this will not always be the case. There will be many times where a client method will exist alone without an equivalent server-side-only method.
 
-Under the hood, Knit will create a RemoteFunction and bind this method to it.
+Under the hood, Crystal will create a RemoteFunction and bind this method to it.
 
 On the client, we could then invoke the service as such:
 
 ```lua
 -- From a LocalScript
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
 
-local PointsService = Knit.GetService("PointsService")
+local PointsService = Crystal.GetService("PointsService")
 PointsService:GetPoints():andThen(function(points)
 	print("Points for myself:", points)
 end)
@@ -169,13 +169,13 @@ end)
 
 ### Signals (Server-to-Client)
 
-We should also create a signal that we can fire events for the clients when their points change. We can use `Knit:CreateSignal()` to indicate we want a signal created for the service.
+We should also create a signal that we can fire events for the clients when their points change. We can use `Crystal:CreateSignal()` to indicate we want a signal created for the service.
 
 ```lua
-local PointsService = Knit.CreateService {
+local PointsService = Crystal.CreateService {
 	Name = "PointsService",
 	Client = {
-		PointsChanged = Knit.CreateSignal(), -- Create the signal
+		PointsChanged = Crystal.CreateSignal(), -- Create the signal
 	},
 }
 ```
@@ -184,7 +184,7 @@ local PointsService = Knit.CreateService {
 See the [RemoteSignal](https://sleitnick.github.io/RbxUtil/api/RemoteSignal) documentation for more info on how to use the RemoteSignal object.
 :::
 
-Under the hood, Knit is using the `Comm` module, which is creating a RemoteEvent object linked to this event. This is a two-way signal (like a transceiver), so we can both send and receive data on both the server and the client.
+Under the hood, Crystal is using the `Comm` module, which is creating a RemoteEvent object linked to this event. This is a two-way signal (like a transceiver), so we can both send and receive data on both the server and the client.
 
 We can then modify our `AddPoints` method again to fire this signal too:
 
@@ -205,9 +205,9 @@ And from the client, we can listen for an event on the signal:
 
 ```lua
 -- From a LocalScript
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
 
-local PointsService = Knit.GetService("PointsService")
+local PointsService = Crystal.GetService("PointsService")
 
 PointsService.PointsChanged:Connect(function(points)
 	print("Points for myself now:", points)
@@ -222,19 +222,19 @@ We will create another client-exposed signal called `GiveMePoints` which will ra
 
 Let's create the signal on the PointsService:
 ```lua
-local PointsService = Knit.CreateService {
+local PointsService = Crystal.CreateService {
 	Name = "PointsService",
 	Client = {
-		PointsChanged = Knit.CreateSignal(),
-		GiveMePoints = Knit.CreateSignal(), -- Create the new signal
+		PointsChanged = Crystal.CreateSignal(),
+		GiveMePoints = Crystal.CreateSignal(), -- Create the new signal
 	},
 }
 ```
 
-Now, let's listen for the client to fire this signal. We can hook this up in our `KnitInit` method:
+Now, let's listen for the client to fire this signal. We can hook this up in our `CrystalInit` method:
 
 ```lua
-function PointsService:KnitInit()
+function PointsService:CrystalInit()
 
 	local rng = Random.new()
 	-- Listen for the client to fire this signal, then give random points:
@@ -252,9 +252,9 @@ From the client, we can fire the signal like so:
 
 ```lua
 -- From a LocalScript
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
 
-local PointsService = Knit.GetService("PointsService")
+local PointsService = Crystal.GetService("PointsService")
 
 -- Fire the signal:
 PointsService.GiveMePoints:Fire()
@@ -274,7 +274,7 @@ easily read this property:
 
 ```lua
 -- Create the RemoteProperty:
-PointsService.Client.Points = Knit.CreateProperty(0)
+PointsService.Client.Points = Crystal.CreateProperty(0)
 
 function PointsService:AddPoints(player, amount)
 	local points = self:GetPoints(player)
@@ -288,9 +288,9 @@ On the client, we can now easily read the `Points` property:
 
 ```lua
 -- LocalScript
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
 
-local PointsService = Knit.GetService("PointsService")
+local PointsService = Crystal.GetService("PointsService")
 
 -- The 'Observe' method will fire for the current value and any time the value changes:
 PointsService.Points:Observe(function(points)
@@ -315,19 +315,19 @@ documentation for more info on how to use the RemoteProperty and ClientRemotePro
 At the end of this tutorial, we should have a PointsService that looks something like this:
 
 ```lua
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
-local Signal = require(Knit.Util.Signal)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
+local Signal = require(Crystal.Util.Signal)
 
-local PointsService = Knit.CreateService {
+local PointsService = Crystal.CreateService {
 	Name = "PointsService",
 	-- Define some properties:
 	PointsPerPlayer = {},
 	PointsChanged = Signal.new(),
 	Client = {
 		-- Expose signals to the client:
-		PointsChanged = Knit.CreateSignal(),
-		GiveMePoints = Knit.CreateSignal(),
-		Points = Knit.CreateProperty(0),
+		PointsChanged = Crystal.CreateSignal(),
+		GiveMePoints = Crystal.CreateSignal(),
+		Points = Crystal.CreateProperty(0),
 	},
 }
 
@@ -355,7 +355,7 @@ function PointsService:GetPoints(player)
 end
 
 -- Initialize
-function PointsService:KnitInit()
+function PointsService:CrystalInit()
 
 	local rng = Random.new()
 	
@@ -382,10 +382,10 @@ Example of client-side LocalScript consuming the PointsService:
 
 ```lua
 -- From a LocalScript
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
-Knit.Start():catch(warn):await()
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
+Crystal.Start():catch(warn):await()
 
-local PointsService = Knit.GetService("PointsService")
+local PointsService = Crystal.GetService("PointsService")
 
 local function PointsChanged(points)
 	print("My points:", points)

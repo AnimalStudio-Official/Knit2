@@ -17,7 +17,7 @@ For the sake of example, we will develop a CameraController.
 In its simplest form, a controller can be created like so:
 
 ```lua
-local CameraController = Knit.CreateController { Name = "CameraController" }
+local CameraController = Crystal.CreateController { Name = "CameraController" }
 
 return CameraController
 ```
@@ -104,7 +104,7 @@ end
 What if we want to create an event that gets fired when the camera is locked and unlocked? We can easily do this! Just create a new signal object as a property of the controller, and fire it in our `LockTo` and `Unlock` methods. Let's created a `LockedChanged` signal. It will pass `true` when locked and `false` when unlocked.
 
 ```lua
-local Signal = require(Knit.Util.Signal)
+local Signal = require(Crystal.Util.Signal)
 
 CameraController.LockedChanged = Signal.new()
 
@@ -123,7 +123,7 @@ Other code could then listen in for that event:
 
 ```lua
 -- Somewhere else on the client
-local CameraController = Knit.GetController("CameraController")
+local CameraController = Crystal.GetController("CameraController")
 
 CameraController.LockedChanged:Connect(function(isLocked)
 	print(isLocked and "Camera is now locked" or "Camera was unlocked")
@@ -132,15 +132,15 @@ end)
 
 ## Server Communication
 
-Knit allows client code to access certain server-side service methods and events that have been explicitly exposed.
+Crystal allows client code to access certain server-side service methods and events that have been explicitly exposed.
 
 See the [Services: Client Communication](services.md#client-communication) section for more info.
 
 An example of accessing a service on the server might look like such:
 
 ```lua
-function CameraController:KnitStart()
-	local SomeService = Knit.GetService("SomeService")
+function CameraController:CrystalStart()
+	local SomeService = Crystal.GetService("SomeService")
 	SomeService:DoSomething()
 	SomeService.SomeEvent:Connect(function(...) end)
 	SomeService.AnotherEvent:Fire("Some data")
@@ -148,21 +148,21 @@ end
 ```
 
 :::caution No client table forces server-only mode
-If the `Client` table is omitted from the service, the service will be interpreted as server-side only. This means that the client will _not_ be able to access the service using `Knit.GetService` on the client if there is no `Client` table present.
+If the `Client` table is omitted from the service, the service will be interpreted as server-side only. This means that the client will _not_ be able to access the service using `Crystal.GetService` on the client if there is no `Client` table present.
 :::caution
 
-## KnitInit and KnitStart
+## CrystalInit and CrystalStart
 
-The `KnitInit` and `KnitStart` methods are optional lifecycle methods that can be added to any controller. For more info, check out the [service version](services.md#knitinit-and-knitstart) of this section (which has the same behavior) and the [execution model](executionmodel.md).
+The `CrystalInit` and `CrystalStart` methods are optional lifecycle methods that can be added to any controller. For more info, check out the [service version](services.md#Crystalinit-and-Crystalstart) of this section (which has the same behavior) and the [execution model](executionmodel.md).
 
 These methods can be added just like any other method:
 
 ```lua
-function CameraController:KnitStart()
-	print("CameraController KnitStart called")
+function CameraController:CrystalStart()
+	print("CameraController CrystalStart called")
 end
 
-function CameraController:KnitInit()
-	print("CameraController KnitInit called")
+function CameraController:CrystalInit()
+	print("CameraController CrystalInit called")
 end
 ```

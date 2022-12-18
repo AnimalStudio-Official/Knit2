@@ -4,7 +4,7 @@ sidebar_position: 9
 
 # VS Code Snippets
 
-Being able to quickly create services, controllers, or other Knit-related items is very useful when using Knit as a framework. To keep Knit lightweight, there are no required extensions or plugins. Instead, below are some VS Code snippets that can be used to speed up development.
+Being able to quickly create services, controllers, or other Crystal-related items is very useful when using Crystal as a framework. To keep Crystal lightweight, there are no required extensions or plugins. Instead, below are some VS Code snippets that can be used to speed up development.
 
 ![Snippets](/snippets.gif)
 
@@ -15,25 +15,25 @@ Snippets are a Visual Studio Code feature. Check out the [Snippets documentation
 1. Type in and select `lua.json`
 1. Within the `{}` braces, include any or all of the snippets below
 1. Save the file
-1. Within your actual source files, start typing a prefix (e.g. "knit") and select the autocompleted snippet to paste it in
+1. Within your actual source files, start typing a prefix (e.g. "Crystal") and select the autocompleted snippet to paste it in
 1. Depending on the snippet, parts of the pasted code will be selected and can be typed over (e.g. setting the name of a service)
 
 -------------------------------------
 
-## Knit Snippets
+## Crystal Snippets
 
-Below are useful VS Code snippets for Knit. The snippets assume that the Knit module has been placed within ReplicatedStorage.
+Below are useful VS Code snippets for Crystal. The snippets assume that the Crystal module has been placed within ReplicatedStorage.
 
-### Knit
-Include a `require` statement for Knit.
+### Crystal
+Include a `require` statement for Crystal.
 <details class="note">
 <summary>Snippet</summary>
 
 ```json
-"Knit": {
-	"prefix": ["knit"],
-	"body": ["local Knit = require(ReplicatedStorage.Packages.Knit)"],
-	"description": "Require the Knit module"
+"Crystal": {
+	"prefix": ["Crystal"],
+	"body": ["local Crystal = require(ReplicatedStorage.Packages.Crystal)"],
+	"description": "Require the Crystal module"
 }
 ```
 
@@ -42,7 +42,7 @@ Include a `require` statement for Knit.
 <summary>Code Result</summary>
 
 ```lua
-local Knit = require(ReplicatedStorage.Packages.Knit)
+local Crystal = require(ReplicatedStorage.Packages.Crystal)
 ```
 
 </details>
@@ -74,29 +74,29 @@ local HttpService = game:GetService("HttpService")
 
 -------------------------------------
 
-### Knit Service
-Reference Knit, create a service, and return the service.
+### Crystal Service
+Reference Crystal, create a service, and return the service.
 <details class="note">
 <summary>Snippet</summary>
 
 ```json
-"Knit Service": {
-	"prefix": ["knitservice"],
+"Crystal Service": {
+	"prefix": ["Crystalservice"],
 	"body": [
-		"local Knit = require(ReplicatedStorage.Packages.Knit)",
+		"local Crystal = require(ReplicatedStorage.Packages.Crystal)",
 		"",
-		"local ${0:$TM_FILENAME_BASE} = Knit.CreateService {",
+		"local ${0:$TM_FILENAME_BASE} = Crystal.CreateService {",
 		"\tName = \"${0:$TM_FILENAME_BASE}\",",
 		"\tClient = {},",
 		"}",
 		"",
 		"",
-		"function ${0:$TM_FILENAME_BASE}:KnitStart()",
+		"function ${0:$TM_FILENAME_BASE}:CrystalStart()",
 		"\t",
 		"end",
 		"",
 		"",
-		"function ${0:$TM_FILENAME_BASE}:KnitInit()",
+		"function ${0:$TM_FILENAME_BASE}:CrystalInit()",
 		"\t",
 		"end",
 		"",
@@ -104,7 +104,7 @@ Reference Knit, create a service, and return the service.
 		"return ${0:$TM_FILENAME_BASE}",
 		""
 	],
-	"description": "Knit Service template"
+	"description": "Crystal Service template"
 }
 ```
 
@@ -113,17 +113,17 @@ Reference Knit, create a service, and return the service.
 <summary>Code Result</summary>
 
 ```lua
-local Knit = require(ReplicatedStorage.Packages.Knit)
+local Crystal = require(ReplicatedStorage.Packages.Crystal)
 
-local MyService = Knit.CreateService {
+local MyService = Crystal.CreateService {
 	Name = "MyService",
 	Client = {},
 }
 
-function MyService:KnitStart()
+function MyService:CrystalStart()
 end
 
-function MyService:KnitInit()
+function MyService:CrystalInit()
 end
 
 return MyService
@@ -133,26 +133,26 @@ return MyService
 
 -------------------------------------
 
-### Knit Controller
-Reference Knit, create a controller, and return the controller.
+### Crystal Controller
+Reference Crystal, create a controller, and return the controller.
 <details class="note">
 <summary>Snippet</summary>
 
 ```json
-"Knit Controller": {
-	"prefix": ["knitcontroller"],
+"Crystal Controller": {
+	"prefix": ["Crystalcontroller"],
 	"body": [
-		"local Knit = require(ReplicatedStorage.Packages.Knit)",
+		"local Crystal = require(ReplicatedStorage.Packages.Crystal)",
 		"",
-		"local ${0:$TM_FILENAME_BASE} = Knit.CreateController { Name = \"${0:$TM_FILENAME_BASE}\" }",
+		"local ${0:$TM_FILENAME_BASE} = Crystal.CreateController { Name = \"${0:$TM_FILENAME_BASE}\" }",
 		"",
 		"",
-		"function ${0:$TM_FILENAME_BASE}:KnitStart()",
+		"function ${0:$TM_FILENAME_BASE}:CrystalStart()",
 		"\t",
 		"end",
 		"",
 		"",
-		"function ${0:$TM_FILENAME_BASE}:KnitInit()",
+		"function ${0:$TM_FILENAME_BASE}:CrystalInit()",
 		"\t",
 		"end",
 		"",
@@ -160,7 +160,7 @@ Reference Knit, create a controller, and return the controller.
 		"return ${0:$TM_FILENAME_BASE}",
 		""
 	],
-	"description": "Knit Controller template"
+	"description": "Crystal Controller template"
 }
 ```
 
@@ -169,16 +169,16 @@ Reference Knit, create a controller, and return the controller.
 <summary>Code Result</summary>
 
 ```lua
-local Knit = require(ReplicatedStorage.Packages.Knit)
+local Crystal = require(ReplicatedStorage.Packages.Crystal)
 
-local MyController = Knit.CreateController {
+local MyController = Crystal.CreateController {
 	Name = "MyController",
 }
 
-function MyController:KnitStart()
+function MyController:CrystalStart()
 end
 
-function MyController:KnitInit()
+function MyController:CrystalInit()
 end
 
 return MyController
@@ -188,16 +188,16 @@ return MyController
 
 -------------------------------------
 
-### Knit Require
-Require a module within Knit.
+### Crystal Require
+Require a module within Crystal.
 <details class="note">
 <summary>Snippet</summary>
 
 ```json
-"Knit Require": {
-	"prefix": ["knitrequire"],
-	"body": ["local ${1:Name} = require(Knit.${2:Util}.${1:Name})"],
-	"description": "Knit Require template"
+"Crystal Require": {
+	"prefix": ["Crystalrequire"],
+	"body": ["local ${1:Name} = require(Crystal.${2:Util}.${1:Name})"],
+	"description": "Crystal Require template"
 }
 ```
 
@@ -206,7 +206,7 @@ Require a module within Knit.
 <summary>Code Result</summary>
 
 ```lua
-local Signal = require(Knit.Util.Signal)
+local Signal = require(Crystal.Util.Signal)
 ```
 
 </details>
@@ -308,29 +308,29 @@ All the above snippets together.
 		"description": "Lua Class"
 	},
 
-	"Knit": {
-		"prefix": ["knit"],
-		"body": ["local Knit = require(ReplicatedStorage.Packages.Knit)"],
-		"description": "Require the Knit module"
+	"Crystal": {
+		"prefix": ["Crystal"],
+		"body": ["local Crystal = require(ReplicatedStorage.Packages.Crystal)"],
+		"description": "Require the Crystal module"
 	},
 
-	"Knit Service": {
-		"prefix": ["knitservice"],
+	"Crystal Service": {
+		"prefix": ["Crystalservice"],
 		"body": [
-			"local Knit = require(ReplicatedStorage.Packages.Knit)",
+			"local Crystal = require(ReplicatedStorage.Packages.Crystal)",
 			"",
-			"local ${0:$TM_FILENAME_BASE} = Knit.CreateService {",
+			"local ${0:$TM_FILENAME_BASE} = Crystal.CreateService {",
 			"\tName = \"${0:$TM_FILENAME_BASE}\",",
 			"\tClient = {},",
 			"}",
 			"",
 			"",
-			"function ${0:$TM_FILENAME_BASE}:KnitStart()",
+			"function ${0:$TM_FILENAME_BASE}:CrystalStart()",
 			"\t",
 			"end",
 			"",
 			"",
-			"function ${0:$TM_FILENAME_BASE}:KnitInit()",
+			"function ${0:$TM_FILENAME_BASE}:CrystalInit()",
 			"\t",
 			"end",
 			"",
@@ -338,23 +338,23 @@ All the above snippets together.
 			"return ${0:$TM_FILENAME_BASE}",
 			""
 		],
-		"description": "Knit Service template"
+		"description": "Crystal Service template"
 	},
 
-	"Knit Controller": {
-		"prefix": ["knitcontroller"],
+	"Crystal Controller": {
+		"prefix": ["Crystalcontroller"],
 		"body": [
-			"local Knit = require(ReplicatedStorage.Packages.Knit)",
+			"local Crystal = require(ReplicatedStorage.Packages.Crystal)",
 			"",
-			"local ${0:$TM_FILENAME_BASE} = Knit.CreateController { Name = \"${0:$TM_FILENAME_BASE}\" }",
+			"local ${0:$TM_FILENAME_BASE} = Crystal.CreateController { Name = \"${0:$TM_FILENAME_BASE}\" }",
 			"",
 			"",
-			"function ${0:$TM_FILENAME_BASE}:KnitStart()",
+			"function ${0:$TM_FILENAME_BASE}:CrystalStart()",
 			"\t",
 			"end",
 			"",
 			"",
-			"function ${0:$TM_FILENAME_BASE}:KnitInit()",
+			"function ${0:$TM_FILENAME_BASE}:CrystalInit()",
 			"\t",
 			"end",
 			"",
@@ -362,13 +362,13 @@ All the above snippets together.
 			"return ${0:$TM_FILENAME_BASE}",
 			""
 		],
-		"description": "Knit Controller template"
+		"description": "Crystal Controller template"
 	},
 
-	"Knit Require": {
-		"prefix": ["knitrequire"],
-		"body": ["local ${1:Name} = require(Knit.${2:Util}.${1:Name})"],
-		"description": "Knit Require template"
+	"Crystal Require": {
+		"prefix": ["Crystalrequire"],
+		"body": ["local ${1:Name} = require(Crystal.${2:Util}.${1:Name})"],
+		"description": "Crystal Require template"
 	}
 
 }

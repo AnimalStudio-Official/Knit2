@@ -4,44 +4,28 @@ sidebar_position: 2
 
 # Getting Started
 
-## Tutorial Videos
-
-Knit can be used via two workflows: Roblox Studio and externally with Rojo and Wally. To help explain how Knit is used through both workflows, check out the tutorial videos for each:
-
-- [Knit Tutorial for Studio](https://youtu.be/0Ty2ojfdOnA)
-- [Knit Tutorial for Rojo/Wally](https://youtu.be/tgndvNQ5agA)
-
 ## Install
 
-Installing Knit is very simple. Just drop the module into ReplicatedStorage. Knit can also be used within a Rojo project.
+Installing Crystal is very simple. Just drop the module into ReplicatedStorage.
 
 **Roblox Studio workflow:**
 
-- Get [Knit](https://www.roblox.com/library/5530714855/Knit) from the Roblox library.
-- Place Knit directly within ReplicatedStorage.
-
-**Rojo/Wally workflow:**
-
-- Add Knit to your `wally.toml` dependency list (e.g. `Knit = "sleitnick/knit@^1.4"`)
-- Require Knit like any other module grabbed from Wally
-
-	:::note Wally
-	Not familiar with Wally? Wally is a package manager (like NPM) for the Roblox ecosystem.
-	To get started, check out the [Wally repository](https://github.com/UpliftGames/wally).
+- Get Crystal from the Release.
+- Place Crystal directly within ReplicatedStorage.
 
 ## Basic Usage
 
-The core usage of Knit is the same from the server and the client. The general pattern is to create a single script on the server and a single script on the client. These scripts will load Knit, create services/controllers, and then start Knit.
+The core usage of Crystal is the same from the server and the client. The general pattern is to create a single script on the server and a single script on the client. These scripts will load Crystal, create services/controllers, and then start Crystal.
 
 The most basic usage would look as such:
 
 ```lua
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
 
-Knit.Start():catch(warn)
--- Knit.Start() returns a Promise, so we are catching any errors and feeding it to the built-in 'warn' function
+Crystal.Start():catch(warn)
+-- Crystal.Start() returns a Promise, so we are catching any errors and feeding it to the built-in 'warn' function
 -- You could also chain 'await()' to the end to yield until the whole sequence is completed:
---    Knit.Start():catch(warn):await()
+--    Crystal.Start():catch(warn):await()
 ```
 
 That would be the necessary code on both the server and the client. However, nothing interesting is going to happen. Let's dive into some more examples.
@@ -51,10 +35,10 @@ That would be the necessary code on both the server and the client. However, not
 A service is simply a structure that _serves_ some specific purpose. For instance, a game might have a MoneyService, which manages in-game currency for players. Let's look at a simple example:
 
 ```lua
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
 
 -- Create the service:
-local MoneyService = Knit.CreateService {
+local MoneyService = Crystal.CreateService {
 	Name = "MoneyService",
 }
 
@@ -73,7 +57,7 @@ function MoneyService:GiveMoney(player, amount)
 	someDataStore:SetAsync("money", money)
 end
 
-Knit.Start():catch(warn)
+Crystal.Start():catch(warn)
 ```
 
 :::note
@@ -99,30 +83,30 @@ We can write client-side code to fetch money from the service:
 
 ```lua
 -- Client-side code
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
-Knit.Start():catch(warn):await()
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
+Crystal.Start():catch(warn):await()
 
-local MoneyService = Knit.GetService("MoneyService")
+local MoneyService = Crystal.GetService("MoneyService")
 
 MoneyService:GetMoney():andThen(function(money)
 	print(money)
 end)
 
--- Don't want to use promises? When you start Knit on the client,
+-- Don't want to use promises? When you start Crystal on the client,
 -- set the ServicePromises option to false:
 ```
 
 :::tip Turn Off Promises
-Don't want to use promises when the client calls a service method? Set the `ServicePromises` option to `false` when you start Knit on the client:
+Don't want to use promises when the client calls a service method? Set the `ServicePromises` option to `false` when you start Crystal on the client:
 ```lua
-Knit.Start({ServicePromises = false}):catch(warn):await()
+Crystal.Start({ServicePromises = false}):catch(warn):await()
 
-local MoneyService = Knit.GetService("MoneyService")
+local MoneyService = Crystal.GetService("MoneyService")
 
 local money = MoneyService:GetMoney()
 ```
 :::
 
-Under the hood, Knit is creating a RemoteFunction bound to the service's GetMoney method. Knit keeps RemoteFunctions and RemoteEvents out of the way so that developers can focus on writing code and not building communication infrastructure.
+Under the hood, Crystal is creating a RemoteFunction bound to the service's GetMoney method. Crystal keeps RemoteFunctions and RemoteEvents out of the way so that developers can focus on writing code and not building communication infrastructure.
 
 Check out the [Services](services.md) documentation for more info on services.
