@@ -2,6 +2,7 @@
 ![Lint](https://github.com/AnimalStudio-Official/Knit2/workflows/Lint/badge.svg)
 ![Deploy Docs](https://github.com/AnimalStudio-Official/Knit2/workflows/Deploy%20Docs/badge.svg)
 
+
 #Crystal
 
 Crystal is a lightweight framework for Roblox that simplifies communication between core parts of your game and seamlessly bridges the gap between the server and the client.
