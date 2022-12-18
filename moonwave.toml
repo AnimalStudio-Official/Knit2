@@ -2,8 +2,8 @@ gitRepoUrl = "https://github.com/AnimalStudio-Official/Knit2"
 
 
 classOrder = [
-	"CrystalServer",
-	"CrystalClient"
+    "CrystalClient",
+	"CrystalServer"
 ]
 
 
