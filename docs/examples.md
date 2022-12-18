@@ -9,7 +9,7 @@ sidebar_position: 7
 A useful pattern is to keep all service modules within a folder. The script that starts Knit can then require all of these at once. Let's say we have a directory structure like such:
 
 - Server
-	- KnitRuntime [Script]
+	- CrystalRuntime [Script]
 	- Services [Folder]
 		- MyService [Module]
 		- AnotherService [Module]
@@ -18,7 +18,7 @@ A useful pattern is to keep all service modules within a folder. The script that
 We can write our KnitRuntime script as such:
 
 ```lua
-local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+local Crystal = require(game:GetService("ReplicatedStorage").Packages.Crystal)
 
 -- Load all services:
 for _,v in ipairs(script.Parent.Services:GetDescendants()) do
@@ -27,7 +27,7 @@ for _,v in ipairs(script.Parent.Services:GetDescendants()) do
 	end
 end
 
-Knit.Start():catch(warn)
+Crystal.Start():catch(warn)
 ```
 
 Alternatively, we can use `Knit.AddServices` or `Knit.AddServicesDeep` to load all of the services without writing a loop. It scans and loads all ModuleScripts found and passes them to `Knit.CreateService`:
