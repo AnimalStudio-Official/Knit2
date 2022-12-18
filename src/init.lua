@@ -1,9 +1,9 @@
 if game:GetService("RunService"):IsServer() then
-	return require(script.KnitServer)
+	return require(script.CrystalServer)
 else
-	local KnitServer = script:FindFirstChild("KnitServer")
-	if KnitServer then
-		KnitServer:Destroy()
+	local CrystalServer = script:FindFirstChild("CrystalServer")
+	if CrystalServer then
+		CrystalServer:Destroy()
 	end
-	return require(script.KnitClient)
+	return require(script.CrystalClient)
 end
