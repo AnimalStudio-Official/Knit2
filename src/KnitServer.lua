@@ -2,7 +2,7 @@
 	@interface Middleware
 	.Inbound ServerMiddleware?
 	.Outbound ServerMiddleware?
-	@within KnitServer
+	@within CrystalServer
 ]=]
 type Middleware = {
 	Inbound: ServerMiddleware?,
@@ -11,7 +11,7 @@ type Middleware = {
 
 --[=[
 	@type ServerMiddlewareFn (player: Player, args: {any}) -> (shouldContinue: boolean, ...: any)
-	@within KnitServer
+	@within CrystalServer
 
 	For more info, see [ServerComm](https://sleitnick.github.io/RbxUtil/api/ServerComm/) documentation.
 ]=]
@@ -19,7 +19,7 @@ type ServerMiddlewareFn = (player: Player, args: {any}) -> (boolean, ...any)
 
 --[=[
 	@type ServerMiddleware {ServerMiddlewareFn}
-	@within KnitServer
+	@within CrystalServer
 	An array of server middleware functions.
 ]=]
 type ServerMiddleware = {ServerMiddlewareFn}
@@ -30,10 +30,10 @@ type ServerMiddleware = {ServerMiddlewareFn}
 	.Client table?
 	.Middleware Middleware?
 	.[any] any
-	@within KnitServer
+	@within CrystalServer
 	Used to define a service when creating it in `CreateService`.
 
-	The middleware tables provided will be used instead of the Knit-level
+	The middleware tables provided will be used instead of the Crystal-level
 	middleware (if any). This allows fine-tuning each service's middleware.
 	These can also be left out or `nil` to not include middleware.
 ]=]
@@ -48,14 +48,14 @@ type ServiceDef = {
 	@interface Service
 	.Name string
 	.Client ServiceClient
-	.KnitComm Comm
+	.CrystalComm Comm
 	.[any] any
-	@within KnitServer
+	@within CrystalServer
 ]=]
 type Service = {
 	Name: string,
 	Client: ServiceClient,
-	KnitComm: any,
+	CrystalComm: any,
 	[any]: any,
 }
 
@@ -63,7 +63,7 @@ type Service = {
 	@interface ServiceClient
 	.Server Service
 	.[any] any
-	@within KnitServer
+	@within CrystalServer
 ]=]
 type ServiceClient = {
 	Server: Service,
@@ -71,53 +71,53 @@ type ServiceClient = {
 }
 
 --[=[
-	@interface KnitOptions
+	@interface CrystalOptions
 	.Middleware Middleware?
-	@within KnitServer
+	@within CrystalServer
 
 	- Middleware will apply to all services _except_ ones that define
 	their own middleware.
 ]=]
-type KnitOptions = {
+type CrystalOptions = {
 	Middleware: Middleware?,
 }
 
-local defaultOptions: KnitOptions = {
+local defaultOptions: CrystalOptions = {
 	Middleware = nil,
 }
 
 local selectedOptions = nil
 
 --[=[
-	@class KnitServer
+	@class CrystalServer
 	@server
-	Knit server-side lets developers create services and expose methods and signals
+	Crystal server-side lets developers create services and expose methods and signals
 	to the clients.
 
 	```lua
-	local Knit = require(somewhere.Knit)
+	local Crystal = require(somewhere.Crystal)
 
 	-- Load service modules within some folder:
-	Knit.AddServices(somewhere.Services)
+	Crystal.AddServices(somewhere.Services)
 
-	-- Start Knit:
-	Knit.Start():andThen(function()
-		print("Knit started")
+	-- Start Crystal:
+	Crystal.Start():andThen(function()
+		print("Crystal started")
 	end):catch(warn)
 	```
 ]=]
-local KnitServer = {}
+local CrystalServer = {}
 
 --[=[
 	@prop Util Folder
-	@within KnitServer
+	@within CrystalServer
 	@readonly
-	References the Util folder. Should only be accessed when using Knit as
-	a standalone module. If using Knit from Wally, modules should just be
-	pulled in via Wally instead of relying on Knit's Util folder, as this
-	folder only contains what is necessary for Knit to run in Wally mode.
+	References the Util folder. Should only be accessed when using Crystal as
+	a standalone module. If using Crystal from Wally, modules should just be
+	pulled in via Wally instead of relying on Crystal's Util folder, as this
+	folder only contains what is necessary for Crystal to run in Wally mode.
 ]=]
-KnitServer.Util = script.Parent.Parent
+CrystalServer.Util = script.Parent.Parent
 
 local SIGNAL_MARKER = newproxy(true)
 getmetatable(SIGNAL_MARKER).__tostring = function()
@@ -129,11 +129,11 @@ getmetatable(PROPERTY_MARKER).__tostring = function()
 	return "PROPERTY_MARKER"
 end
 
-local knitRepServiceFolder = Instance.new("Folder")
-knitRepServiceFolder.Name = "Services"
+local CrystalRepServiceFolder = Instance.new("Folder")
+CrystalRepServiceFolder.Name = "Services"
 
-local Promise = require(KnitServer.Util.Promise)
-local Comm = require(KnitServer.Util.Comm)
+local Promise = require(CrystalServer.Util.Promise)
+local Comm = require(CrystalServer.Util.Comm)
 local ServerComm = Comm.ServerComm
 
 local services: {[string]: Service} = {}
@@ -152,11 +152,11 @@ end
 	Constructs a new service.
 
 	:::caution
-	Services must be created _before_ calling `Knit.Start()`.
+	Services must be created _before_ calling `Crystal.Start()`.
 	:::
 	```lua
 	-- Create a service
-	local MyService = Knit.CreateService {
+	local MyService = Crystal.CreateService {
 		Name = "MyService",
 		Client = {},
 	}
@@ -166,24 +166,24 @@ end
 		return msg:upper()
 	end
 
-	-- Knit will call KnitStart after all services have been initialized
-	function MyService:KnitStart()
+	-- Crystal will call CrystalStart after all services have been initialized
+	function MyService:CrystalStart()
 		print("MyService started")
 	end
 
-	-- Knit will call KnitInit when Knit is first started
-	function MyService:KnitInit()
+	-- Crystal will call CrystalInit when Crystal is first started
+	function MyService:CrystalInit()
 		print("MyService initialize")
 	end
 	```
 ]=]
-function KnitServer.CreateService(serviceDef: ServiceDef): Service
+function CrystalServer.CreateService(serviceDef: ServiceDef): Service
 	assert(type(serviceDef) == "table", "Service must be a table; got " .. type(serviceDef))
 	assert(type(serviceDef.Name) == "string", "Service.Name must be a string; got " .. type(serviceDef.Name))
 	assert(#serviceDef.Name > 0, "Service.Name must be a non-empty string")
 	assert(not DoesServiceExist(serviceDef.Name), "Service \"" .. serviceDef.Name .. "\" already exists")
 	local service = serviceDef
-	service.KnitComm = ServerComm.new(knitRepServiceFolder, serviceDef.Name)
+	service.CrystalComm = ServerComm.new(CrystalRepServiceFolder, serviceDef.Name)
 	if type(service.Client) ~= "table" then
 		service.Client = {Server = service}
 	else
@@ -200,10 +200,10 @@ end
 	Requires all the modules that are children of the given parent with an optional affix. This is an easy
 	way to quickly load all services that might be in a folder.
 	```lua
-	Knit.AddServices(somewhere.Services)
+	Crystal.AddServices(somewhere.Services)
 	```
 ]=]
-function KnitServer.AddServices(parent: Instance, affix: string): {Service}
+function CrystalServer.AddServices(parent: Instance, affix: string): {Service}
 	local addedServices = {}
 	for _,v in ipairs(parent:GetChildren()) do
 		if not v:IsA("ModuleScript") then continue end
@@ -217,7 +217,7 @@ end
 --[=[
 	Requires all the modules that are descendants of the given parent with an optional affix.
 ]=]
-function KnitServer.AddServicesDeep(parent: Instance, affix: string): {Service}
+function CrystalServer.AddServicesDeep(parent: Instance, affix: string): {Service}
 	local addedServices = {}
 	for _,v in ipairs(parent:GetDescendants()) do
 		if not v:IsA("ModuleScript") then continue end
@@ -231,8 +231,8 @@ end
 --[=[
 	Gets the service by name. Throws an error if the service is not found.
 ]=]
-function KnitServer.GetService(serviceName: string): Service
-	assert(started, "Cannot call GetService until Knit has been started")
+function CrystalServer.GetService(serviceName: string): Service
+	assert(started, "Cannot call GetService until Crystal has been started")
 	assert(type(serviceName) == "string", "ServiceName must be a string; got " .. type(serviceName))
 	return assert(services[serviceName], "Could not find service \"" .. serviceName .. "\"") :: Service
 end
@@ -247,22 +247,22 @@ end
 	See [RemoteSignal](https://sleitnick.github.io/RbxUtil/api/RemoteSignal)
 	documentation for more info.
 	```lua
-	local MyService = Knit.CreateService {
+	local MyService = Crystal.CreateService {
 		Name = "MyService",
 		Client = {
 			-- Create the signal marker, which will turn into a
-			-- RemoteSignal when Knit.Start() is called:
-			MySignal = Knit.CreateSignal(),
+			-- RemoteSignal when Crystal.Start() is called:
+			MySignal = Crystal.CreateSignal(),
 		},
 	}
 
-	function MyService:KnitInit()
+	function MyService:CrystalInit()
 		-- Connect to the signal:
 		self.Client.MySignal:Connect(function(player, ...) end)
 	end
 	```
 ]=]
-function KnitServer.CreateSignal()
+function CrystalServer.CreateSignal()
 	return SIGNAL_MARKER
 end
 
@@ -281,32 +281,32 @@ end
 	documentation for more info.
 
 	```lua
-	local MyService = Knit.CreateService {
+	local MyService = Crystal.CreateService {
 		Name = "MyService",
 		Client = {
 			-- Create the property marker, which will turn into a
-			-- RemoteProperty when Knit.Start() is called:
-			MyProperty = Knit.CreateProperty("HelloWorld"),
+			-- RemoteProperty when Crystal.Start() is called:
+			MyProperty = Crystal.CreateProperty("HelloWorld"),
 		},
 	}
 
-	function MyService:KnitInit()
+	function MyService:CrystalInit()
 		-- Change the value of the property:
 		self.Client.MyProperty:Set("HelloWorldAgain")
 	end
 	```
 ]=]
-function KnitServer.CreateProperty(initialValue: any)
+function CrystalServer.CreateProperty(initialValue: any)
 	return {PROPERTY_MARKER, initialValue}
 end
 
 
 --[=[
 	@return Promise
-	Starts Knit. Should only be called once.
+	Starts Crystal. Should only be called once.
 
-	Optionally, `KnitOptions` can be passed in order to set
-	Knit's custom configurations.
+	Optionally, `CrystalOptions` can be passed in order to set
+	Crystal's custom configurations.
 
 	:::caution
 	Be sure that all services have been created _before_
@@ -314,14 +314,14 @@ end
 	:::
 
 	```lua
-	Knit.Start():andThen(function()
-		print("Knit started!")
+	Crystal.Start():andThen(function()
+		print("Crystal started!")
 	end):catch(warn)
 	```
 	
-	Example of Knit started with options:
+	Example of Crystal started with options:
 	```lua
-	Knit.Start({
+	Crystal.Start({
 		Middleware = {
 			Inbound = {
 				function(player, args)
@@ -331,14 +331,14 @@ end
 			},
 		},
 	}):andThen(function()
-		print("Knit started!")
+		print("Crystal started!")
 	end):catch(warn)
 	```
 ]=]
-function KnitServer.Start(options: KnitOptions?)
+function CrystalServer.Start(options: CrystalOptions?)
 
 	if started then
-		return Promise.reject("Knit already started")
+		return Promise.reject("Crystal already started")
 	end
 
 	started = true
@@ -346,7 +346,7 @@ function KnitServer.Start(options: KnitOptions?)
 	if options == nil then
 		selectedOptions = defaultOptions
 	else
-		assert(typeof(options) == "table", "KnitOptions should be a table or nil; got " .. typeof(options))
+		assert(typeof(options) == "table", "CrystalOptions should be a table or nil; got " .. typeof(options))
 		selectedOptions = options
 		for k,v in pairs(defaultOptions) do
 			if selectedOptions[k] == nil then
@@ -357,21 +357,21 @@ function KnitServer.Start(options: KnitOptions?)
 
 	return Promise.new(function(resolve)
 
-		local knitMiddleware = selectedOptions.Middleware or {}
+		local CrystalMiddleware = selectedOptions.Middleware or {}
 
 		-- Bind remotes:
 		for _,service in pairs(services) do
 			local middleware = service.Middleware or {}
-			local inbound = middleware.Inbound or knitMiddleware.Inbound
-			local outbound = middleware.Outbound or knitMiddleware.Outbound
+			local inbound = middleware.Inbound or CrystalMiddleware.Inbound
+			local outbound = middleware.Outbound or CrystalMiddleware.Outbound
 			service.Middleware = nil
 			for k,v in pairs(service.Client) do
 				if type(v) == "function" then
-					service.KnitComm:WrapMethod(service.Client, k, inbound, outbound)
+					service.CrystalComm:WrapMethod(service.Client, k, inbound, outbound)
 				elseif v == SIGNAL_MARKER then
-					service.Client[k] = service.KnitComm:CreateSignal(k, inbound, outbound)
+					service.Client[k] = service.CrystalComm:CreateSignal(k, inbound, outbound)
 				elseif type(v) == "table" and v[1] == PROPERTY_MARKER then
-					service.Client[k] = service.KnitComm:CreateProperty(k, v[2], inbound, outbound)
+					service.Client[k] = service.CrystalComm:CreateProperty(k, v[2], inbound, outbound)
 				end
 			end
 		end
@@ -379,10 +379,10 @@ function KnitServer.Start(options: KnitOptions?)
 		-- Init:
 		local promisesInitServices = {}
 		for _,service in pairs(services) do
-			if type(service.KnitInit) == "function" then
+			if type(service.CrystalInit) == "function" then
 				table.insert(promisesInitServices, Promise.new(function(r)
 					debug.setmemorycategory(service.Name)
-					service:KnitInit()
+					service:CrystalInit()
 					r()
 				end))
 			end
@@ -394,10 +394,10 @@ function KnitServer.Start(options: KnitOptions?)
 
 		-- Start:
 		for _,service in pairs(services) do
-			if type(service.KnitStart) == "function" then
+			if type(service.CrystalStart) == "function" then
 				task.spawn(function()
 					debug.setmemorycategory(service.Name)
-					service:KnitStart()
+					service:CrystalStart()
 				end)
 			end
 		end
@@ -410,7 +410,7 @@ function KnitServer.Start(options: KnitOptions?)
 		end)
 
 		-- Expose service remotes to everyone:
-		knitRepServiceFolder.Parent = script.Parent
+		CrystalRepServiceFolder.Parent = script.Parent
 
 	end)
 
@@ -419,17 +419,17 @@ end
 
 --[=[
 	@return Promise
-	Returns a promise that is resolved once Knit has started. This is useful
-	for any code that needs to tie into Knit services but is not the script
+	Returns a promise that is resolved once Crystal has started. This is useful
+	for any code that needs to tie into Crystal services but is not the script
 	that called `Start`.
 	```lua
-	Knit.OnStart():andThen(function()
-		local MyService = Knit.Services.MyService
+	Crystal.OnStart():andThen(function()
+		local MyService = Crystal.Services.MyService
 		MyService:DoSomething()
 	end):catch(warn)
 	```
 ]=]
-function KnitServer.OnStart()
+function CrystalServer.OnStart()
 	if startedComplete then
 		return Promise.resolve()
 	else
@@ -438,4 +438,4 @@ function KnitServer.OnStart()
 end
 
 
-return KnitServer
+return CrystalServer
